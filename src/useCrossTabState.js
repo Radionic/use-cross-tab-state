@@ -67,10 +67,10 @@ const useCrossTabState = (key, initValue, options = {}) => {
         if (typeof storage['onSave'] === 'function') {
           saveValue = storage['onSave'](saveValue);
         }
-        localStorage[key] = saveValue;
+        localStorage[key] = JSON.stringify({ data: saveValue });
       } else {
         // Save state to session to avoid state lost due to leadership remains after tab refreshed
-        sessionStorage[key] = state;
+        sessionStorage[key] = JSON.stringify({ data: state });
       }
     }
   }, [state, inited, isLeader, storage]);
@@ -82,13 +82,13 @@ const useCrossTabState = (key, initValue, options = {}) => {
       setInited(true);
 
       if (storage) {
-        let initState = localStorage[key];
+        let initState = JSON.parse(localStorage[key]).data;
         if (typeof storage['onRead'] === 'function') {
           initState = storage['onRead'](initState);
         }
         dispatchState(initState);
       } else if (sessionStorage.getItem(key)) {
-        dispatchState(sessionStorage.getItem(key));
+        dispatchState(JSON.parse(sessionStorage.getItem(key)).data);
       } else {
         channel.postMessage(state);
       }
