@@ -1,0 +1,10 @@
+{
+  "name": "use-cross-tab-state",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {},
+  "license": "MIT",
+  "dependencies": {
+    "broadcast-channel": "^4.14.0"
+  }
+}
