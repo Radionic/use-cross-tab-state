@@ -94,7 +94,15 @@ const useCrossTabState = (key, initValue, options = {}) => {
       }
     }
   }, [isLeader, state, channel, storage, dispatchState]);
-  return { state, setState: dispatchState, isLeader };
+
+  const useLeader = (effect, deps) =>
+    useEffect(() => {
+      if (isLeader) {
+        effect();
+      }
+    }, [isLeader, ...deps]);
+
+  return { state, setState: dispatchState, useLeader };
 };
 
 export default useCrossTabState;
