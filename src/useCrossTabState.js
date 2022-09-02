@@ -36,7 +36,7 @@ const useCrossTabState = (key, initValue, options = {}) => {
     }
     channel.onmessage = message => {
       // Leader returns state if requesed by other tabs
-      if (message.type === 'ASK_INIT_VALUE') {
+      if (message?.type === 'ASK_INIT_VALUE') {
         if (isLeader) {
           channel.postMessage({ type: 'RETURN_INIT_VALUE', state });
         }
@@ -44,7 +44,7 @@ const useCrossTabState = (key, initValue, options = {}) => {
       }
 
       // Set state when received broadcast message
-      if (message.type === 'RETURN_INIT_VALUE') {
+      if (message?.type === 'RETURN_INIT_VALUE') {
         setInited(true);
         message = message.state;
       }
