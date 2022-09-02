@@ -36,15 +36,15 @@ const useCrossTabState = (key, initValue, options = {}) => {
     }
     channel.onmessage = message => {
       // Leader returns state if requesed by other tabs
-      if (message.type === 'ASK_FOR_VALUE') {
+      if (message.type === 'ASK_INIT_VALUE') {
         if (isLeader) {
-          channel.postMessage({ type: 'RETURN_VALUE', state });
+          channel.postMessage({ type: 'RETURN_INIT_VALUE', state });
         }
         return;
       }
 
       // Set state when received broadcast message
-      if (message.type === 'RETURN_VALUE') {
+      if (message.type === 'RETURN_INIT_VALUE') {
         setInited(true);
         message = message.state;
       }
@@ -55,7 +55,7 @@ const useCrossTabState = (key, initValue, options = {}) => {
   // Ask leader for initial value
   useEffect(() => {
     if (channel && !inited) {
-      channel.postMessage({ type: 'ASK_FOR_VALUE' });
+      channel.postMessage({ type: 'ASK_INIT_VALUE' });
     }
   }, [channel, inited]);
 
@@ -79,21 +79,27 @@ const useCrossTabState = (key, initValue, options = {}) => {
   // then broadcast the state (to avoid the issue that leader tab A refreshed and isn't leader anymore, then tab A asks for init value, but no leader is elected yet)
   useEffect(() => {
     if (isLeader && channel) {
-      setInited(true);
-
+      let initState;
       if (storage) {
-        let initState = JSON.parse(localStorage[key]).data;
+        initState = JSON.parse(localStorage[key]).data;
         if (typeof storage['onRead'] === 'function') {
           initState = storage['onRead'](initState);
         }
-        dispatchState(initState);
-      } else if (sessionStorage.getItem(key)) {
-        dispatchState(JSON.parse(sessionStorage.getItem(key)).data);
+      } else if (sessionStorage.getItem(key) && !inited) {
+        // leader -> leader due to tab refresh, then read from session storage
+        initState = JSON.parse(sessionStorage.getItem(key)).data;
       } else {
-        channel.postMessage(state);
+        // non-leader -> leader due to leader death, then broadcast its state
+        initState = state;
       }
+
+      if (!inited) {
+        setState(initState);
+      }
+      channel.postMessage({ type: 'RETURN_INIT_VALUE', state: initState });
+      setInited(true);
     }
-  }, [isLeader, state, channel, storage, dispatchState]);
+  }, [isLeader, state, channel, storage, setState, setInited]);
 
   const useLeader = (effect, deps) =>
     useEffect(() => {
