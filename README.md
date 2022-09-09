@@ -63,6 +63,14 @@ const [state, setState, results] = useCrossTabState(key, defaultValue, options);
     </td>
   </tr>
   <tr>
+    <td> debounce </td>
+    <td> Number </td>
+    <td> undefined </td>
+    <td> 
+      Delay state dispatch to other tabs until <code>debounce</code> ms passed after the last call of <code>setState</code>. 
+    </td>
+  </tr>
+  <tr>
     <td> checkLeaderInterval </td>
     <td> Number </td>
     <td> 200 </td>

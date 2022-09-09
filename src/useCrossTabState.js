@@ -1,21 +1,29 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 
 const useCrossTabState = (key, initValue, options = {}) => {
-  const { storage, checkLeaderInterval = 200 } = options;
+  const { storage, debounce, checkLeaderInterval = 200 } = options;
   const [state, setState] = useState(initValue);
   const [channel, setChannel] = useState();
   const [inited, setInited] = useState();
   const [isLeader, setIsLeader] = useState();
+  const timeoutId = useRef();
 
   const dispatchState = useCallback(
     newState => {
+      setState(newState);
       if (channel) {
-        setState(newState);
-        channel.postMessage(newState);
+        if (debounce > 0) {
+          window.clearTimeout(timeoutId.current);
+          timeoutId.current = window.setTimeout(() => {
+            channel.postMessage(newState);
+          }, debounce);
+        } else {
+          channel.postMessage(newState);
+        }
       }
     },
-    [channel, setState]
+    [channel, debounce, setState]
   );
 
   useEffect(() => {
