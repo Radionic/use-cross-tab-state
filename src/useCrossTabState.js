@@ -35,32 +35,32 @@ const useCrossTabState = (key, initValue, options = {}) => {
       setIsLeader(true);
     });
 
-    // Wait leader to be elected before asking leader for init value
-    const checkHasLeader = setInterval(() => {
-      if (elector.hasLeader) {
-        clearInterval(checkHasLeader);
-        if (elector.isLeader) {
-          if (storage) {
-            // Retrieve init value from local storage (if any)
-            if (localStorage[key]) {
-              let initState = JSON.parse(localStorage[key]).data;
-              if (typeof storage['onRead'] === 'function') {
-                initState = storage['onRead'](initState);
-              }
-              setState(initState);
-            }
-            setInited(true);
-          } else if (!inited) {
+    if (storage) {
+      // Retrieve init value from local storage (if any)
+      if (localStorage[key]) {
+        let initState = JSON.parse(localStorage[key]).data;
+        if (typeof storage['onRead'] === 'function') {
+          initState = storage['onRead'](initState);
+        }
+        setState(initState);
+      }
+      setInited(true);
+    } else {
+      // Wait leader to be elected before asking leader for init value
+      const checkHasLeader = setInterval(() => {
+        if (elector.hasLeader) {
+          clearInterval(checkHasLeader);
+          if (elector.isLeader) {
             // Retrieve init value from non-leader tab (if any)
             // TODO: more efficient way to retrieve init value for leader tab without storage?
             newChannel.postMessage({ type: 'ASK_INIT_VALUE', force: true });
+          } else {
+            // Retrieve init value from leader tab
+            newChannel.postMessage({ type: 'ASK_INIT_VALUE' });
           }
-        } else {
-          // Retrieve init value from leader tab
-          newChannel.postMessage({ type: 'ASK_INIT_VALUE' });
         }
-      }
-    }, checkLeaderInterval);
+      }, checkLeaderInterval);
+    }
 
     return () => newChannel.close();
   }, []);
