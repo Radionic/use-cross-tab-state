@@ -32,7 +32,6 @@ const useCrossTabState = (key, initValue, options = {}) => {
     setChannel(newChannel);
     const elector = createLeaderElection(newChannel);
     elector.awaitLeadership().then(() => {
-      document.title = `isLeader ${key}`;
       setIsLeader(true);
     });
 
