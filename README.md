@@ -2,6 +2,14 @@
 
 A React hook for state synchronization and persistence across multiple browser tabs.
 
+## Installation
+
+```sh
+npm i use-cross-tab-state
+# or
+yarn add use-cross-tab-state
+```
+
 ## Usage
 
 ```javascript
