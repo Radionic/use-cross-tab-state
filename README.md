@@ -1,6 +1,7 @@
 # use-cross-tab-state
 
-A React hook for state synchronization and persistence across multiple browser tabs.
+A React hook for state synchronization and persistence across multiple browser tabs. The [broadcast-channel
+](https://github.com/pubkey/broadcast-channel) is used to dispatch state across tabs.
 
 ## Installation
 
@@ -98,6 +99,10 @@ const [state, setState, results] = useCrossTabState(key, defaultValue, options);
     </td>
   </tr>
 </table>
+
+## Known Issues
+
+- Broadcast channel does not work in Safari private tabs created manually. It works if the private tab is spawned by another private tab.
 
 ## Credits
 
