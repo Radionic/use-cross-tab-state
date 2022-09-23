@@ -34,16 +34,12 @@ import { useCrossTabState } from 'use-cross-tab-state';
 const App = () => {
   const [news, setNews, { useLeader }] = useCrossTabState('news');
 
-  // useLeader is similar to useEffect: the function will re-run when dependencies changed,
-  // except it will only run ONCE in leader tab even if multiple tabs exist.
+  // useLeader is similar to useEffect: function will re-run when dependencies changed,
+  // except it will only run ONCE in the leader tab even if multiple tabs exist.
   useLeader(() => {
-    // Note: the function will also re-run when current tab becomes leader,
-    // so fetch data only if data is not fetched by old leaders yet.
-    if (!news) {
-      console.log('[Leader] Fetching news...');
-      setNews(...);
-    }
-  }, [news]);
+    console.log('[Leader] Fetching news...');
+    setNews(...);
+  }, []);
 };
 ```
 
@@ -98,9 +94,7 @@ const [state, setState, results] = useCrossTabState(key, defaultValue, options);
     <td> useLeader </td>
     <td> Function </td>
     <td>
-      Similar to useEffect: the function will re-run when dependencies changed, except it will only run <b>ONCE</b> in leader tab even if multiple tabs exist.
-      <br />
-      Note: the function will re-run when current tab becomes leader (it may happen when the original leader tab is closed).
+      Similar to useEffect: function will re-run when dependencies changed, except it will only run <b>ONCE</b> in the leader tab even if multiple tabs exist.
     </td>
   </tr>
 </table>

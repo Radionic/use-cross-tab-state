@@ -6,7 +6,7 @@ const useCrossTabState = (key, initValue, options = {}) => {
   const [state, setState] = useState(initValue);
   const [channel, setChannel] = useState();
   const [inited, setInited] = useState();
-  const [isLeader, setIsLeader] = useState();
+  const isLeader = useRef();
   const timeoutId = useRef();
 
   const dispatchState = useCallback(
@@ -23,7 +23,7 @@ const useCrossTabState = (key, initValue, options = {}) => {
         }
       }
     },
-    [channel, debounce, setState]
+    [channel, debounce]
   );
 
   useEffect(() => {
@@ -32,7 +32,7 @@ const useCrossTabState = (key, initValue, options = {}) => {
     setChannel(newChannel);
     const elector = createLeaderElection(newChannel);
     elector.awaitLeadership().then(() => {
-      setIsLeader(true);
+      isLeader.current = true;
     });
 
     if (storage) {
@@ -72,7 +72,7 @@ const useCrossTabState = (key, initValue, options = {}) => {
     channel.onmessage = message => {
       // Leader returns state if requesed by other tabs
       if (message?.type === 'ASK_INIT_VALUE') {
-        if (isLeader || message.force) {
+        if (isLeader.current || message.force) {
           channel.postMessage({ type: 'RETURN_INIT_VALUE', state });
         }
         return;
@@ -88,25 +88,25 @@ const useCrossTabState = (key, initValue, options = {}) => {
       }
       setState(message);
     };
-  }, [channel, state, inited, isLeader, setState]);
+  }, [channel, state, inited]);
 
   // Leader writes to local storage when state is changed
   useEffect(() => {
-    if (isLeader && inited && storage) {
+    if (isLeader.current && inited && storage) {
       let saveValue = state;
       if (typeof storage['onSave'] === 'function') {
         saveValue = storage['onSave'](saveValue);
       }
       localStorage[key] = JSON.stringify({ data: saveValue });
     }
-  }, [state, inited, isLeader, storage]);
+  }, [state, inited, storage]);
 
   const useLeader = (effect, deps) =>
     useEffect(() => {
-      if (isLeader) {
+      if (isLeader.current) {
         effect();
       }
-    }, [isLeader, ...deps]);
+    }, deps);
 
   return [state, dispatchState, { useLeader }];
 };
