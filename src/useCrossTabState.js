@@ -4,33 +4,31 @@ import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 const useCrossTabState = (key, initValue, options = {}) => {
   const { storage, debounce, checkLeaderInterval = 200 } = options;
   const [state, setState] = useState(initValue);
-  const [channel, setChannel] = useState();
-  const [inited, setInited] = useState();
+  const channel = useRef();
   const isLeader = useRef();
   const timeoutId = useRef();
 
   const dispatchState = useCallback(
     newState => {
       setState(newState);
-      if (channel) {
+      if (channel.current) {
         if (debounce > 0) {
           window.clearTimeout(timeoutId.current);
           timeoutId.current = window.setTimeout(() => {
-            channel.postMessage(newState);
+            channel.current.postMessage(newState);
           }, debounce);
         } else {
-          channel.postMessage(newState);
+          channel.current.postMessage(newState);
         }
       }
     },
-    [channel, debounce]
+    [debounce]
   );
 
   useEffect(() => {
     // Create broadcast channel and await for leadership
-    const newChannel = new BroadcastChannel(key);
-    setChannel(newChannel);
-    const elector = createLeaderElection(newChannel);
+    channel.current = new BroadcastChannel(key);
+    const elector = createLeaderElection(channel.current);
     elector.awaitLeadership().then(() => {
       isLeader.current = true;
     });
@@ -44,7 +42,6 @@ const useCrossTabState = (key, initValue, options = {}) => {
         }
         setState(initState);
       }
-      setInited(true);
     } else {
       // Wait leader to be elected before asking leader for init value
       const checkHasLeader = setInterval(() => {
@@ -53,53 +50,52 @@ const useCrossTabState = (key, initValue, options = {}) => {
           if (elector.isLeader) {
             // Retrieve init value from non-leader tab (if any)
             // TODO: more efficient way to retrieve init value for leader tab without storage?
-            newChannel.postMessage({ type: 'ASK_INIT_VALUE', force: true });
+            channel.current.postMessage({
+              type: 'ASK_INIT_VALUE',
+              force: true,
+            });
           } else {
             // Retrieve init value from leader tab
-            newChannel.postMessage({ type: 'ASK_INIT_VALUE' });
+            channel.current.postMessage({ type: 'ASK_INIT_VALUE' });
           }
         }
       }, checkLeaderInterval);
     }
 
-    return () => newChannel.close();
+    return channel.current.close;
   }, []);
 
   useEffect(() => {
-    if (!channel) {
+    if (!channel.current) {
       return;
     }
-    channel.onmessage = message => {
+    channel.current.onmessage = message => {
       // Leader returns state if requesed by other tabs
       if (message?.type === 'ASK_INIT_VALUE') {
         if (isLeader.current || message.force) {
-          channel.postMessage({ type: 'RETURN_INIT_VALUE', state });
+          channel.current.postMessage({ type: 'RETURN_INIT_VALUE', state });
         }
         return;
       }
 
       // Set state when received broadcast message
       if (message?.type === 'RETURN_INIT_VALUE') {
-        if (inited) {
-          return;
-        }
-        setInited(true);
         message = message.state;
       }
       setState(message);
     };
-  }, [channel, state, inited]);
+  }, [state]);
 
   // Leader writes to local storage when state is changed
   useEffect(() => {
-    if (isLeader.current && inited && storage) {
+    if (isLeader.current && storage) {
       let saveValue = state;
       if (typeof storage['onSave'] === 'function') {
         saveValue = storage['onSave'](saveValue);
       }
       localStorage[key] = JSON.stringify({ data: saveValue });
     }
-  }, [state, inited, storage]);
+  }, [state, storage]);
 
   const useLeader = (effect, deps) =>
     useEffect(() => {
