@@ -4,8 +4,9 @@ import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 const useCrossTabState = (key, initValue, options = {}) => {
   const { storage, debounce, checkLeaderInterval = 200 } = options;
   const [state, setState] = useState(initValue);
-  const channel = useRef();
+  const [foundLeader, setFoundLeader] = useState();
   const isLeader = useRef();
+  const channel = useRef();
   const timeoutId = useRef();
 
   const dispatchState = useCallback(
@@ -47,6 +48,8 @@ const useCrossTabState = (key, initValue, options = {}) => {
       const checkHasLeader = setInterval(() => {
         if (elector.hasLeader) {
           clearInterval(checkHasLeader);
+          // Trigger re-run of useLeader
+          setFoundLeader(true);
           if (elector.isLeader) {
             // Retrieve init value from non-leader tab (if any)
             // TODO: more efficient way to retrieve init value for leader tab without storage?
@@ -66,9 +69,6 @@ const useCrossTabState = (key, initValue, options = {}) => {
   }, []);
 
   useEffect(() => {
-    if (!channel.current) {
-      return;
-    }
     channel.current.onmessage = message => {
       // Leader returns state if requesed by other tabs
       if (message?.type === 'ASK_INIT_VALUE') {
@@ -99,10 +99,12 @@ const useCrossTabState = (key, initValue, options = {}) => {
 
   const useLeader = (effect, deps) =>
     useEffect(() => {
-      if (isLeader.current) {
+      // `foundLeader` solves: `useLeader` runs before a leader is elected, then `effect()` is not invoked
+      // `isLeader.current` avoids: `useLeader` re-runs when another leader tab died and current tab becomes leader
+      if (foundLeader && isLeader.current) {
         effect();
       }
-    }, deps);
+    }, [foundLeader, ...deps]);
 
   return [state, dispatchState, { useLeader }];
 };
